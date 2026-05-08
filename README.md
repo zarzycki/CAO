@@ -206,13 +206,39 @@ Runs TempestExtremes `StitchBlobs` serially, passing all 42 seasons via `--in_li
 
 ## Environment
 
-Steps 1 and 2 (Python) require the `npl` conda environment:
+### Python (steps 1–2)
+
+**On NCAR systems (Casper/Derecho)** — the `npl` environment already has everything needed:
 ```bash
 module load conda
 conda activate npl
 ```
 
-Steps 3 and 4 (TempestExtremes) use the Casper module stack:
+**Anywhere else** — create a minimal environment from the provided YAML:
+```bash
+conda env create -f environment.yml   # creates the 'cao' environment
+conda activate cao
+```
+
+To update an existing `cao` environment after pulling changes:
+```bash
+conda env update -f environment.yml --prune
+```
+
+Python dependencies (see `environment.yml`):
+
+| Package | Role |
+|---|---|
+| `numpy` | Array operations and OLS detrending in step 2 |
+| `xarray` | Reading/writing netCDF; daily-mean computation in step 1 |
+| `netcdf4` | Primary netCDF I/O backend for xarray |
+| `h5netcdf` | HDF5/netCDF4 alternative backend; required for some ERA5 files |
+
+### TempestExtremes (steps 3–4)
+
+Pre-built binaries are at `/glade/work/zarzycki/tempestextremes_casper/bin/` (Casper) and
+`/glade/work/zarzycki/tempestextremes/bin/` (Derecho). The submit scripts load the required
+module stack automatically:
 ```
 ncarenv / ncarcompilers / intel / openmpi / netcdf
 ```

@@ -1,0 +1,9 @@
+name: cao
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - numpy
+  - xarray
+  - netcdf4      # primary netCDF I/O backend for xarray
+  - h5netcdf     # HDF5/netCDF4 alternative backend; required for some ERA5 files
