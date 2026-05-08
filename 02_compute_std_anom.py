@@ -19,23 +19,9 @@ import xarray as xr
 import numpy as np
 import os
 
-def _load_namelist():
-    base = os.path.dirname(os.path.abspath(__file__))
-    cfg = {}
-    for fname in ("namelist_defaults.sh", "namelist.sh"):
-        fpath = os.path.join(base, fname)
-        if not os.path.exists(fpath):
-            continue
-        with open(fpath) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                key, _, val = line.partition("=")
-                cfg[key.strip()] = val.strip()
-    return cfg
+from cao_utils import load_namelist
 
-NL = _load_namelist()
+NL = load_namelist()
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
