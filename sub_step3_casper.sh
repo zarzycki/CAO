@@ -47,4 +47,7 @@ mpiexec ${TE_BIN} \
     --verbosity 0
 
 rm -f "${IN_LIST}" "${OUT_LIST}"
+
+rm -v log*.txt
+
 echo "Step 3 complete."

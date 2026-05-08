@@ -2,7 +2,7 @@
 
 #PBS -N cao-step4
 #PBS -A P93300042
-#PBS -l select=1:ncpus=1:mem=10GB
+#PBS -l select=1:ncpus=1:mem=50GB
 #PBS -l walltime=01:00:00
 #PBS -q casper@casper-pbs
 #PBS -j oe
@@ -23,7 +23,7 @@ module load netcdf
 
 TE_BIN="${TE_BIN_DIR}/StitchBlobs"
 IN_DIR="${SCRATCH_ROOT}/binary_masks"
-OUT_DIR="${SCRATCH_ROOT}/blobs_reproduced"
+OUT_DIR="${SCRATCH_ROOT}/blobs"
 mkdir -p "${OUT_DIR}"
 
 IN_LIST=$(mktemp)
@@ -40,7 +40,6 @@ ${TE_BIN} \
     --in_list          "${IN_LIST}" \
     --out_list         "${OUT_LIST}" \
     --var              binary_tag \
-    --regional \
     --outvar           BLOB_t2m_stdanom \
     --minsize          ${MIN_SIZE} \
     --mintime          ${MIN_TIME} \
