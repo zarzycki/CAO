@@ -19,7 +19,7 @@ import xarray as xr
 import numpy as np
 import os
 
-from cao_utils import load_namelist
+from cao_utils import load_namelist, ensure_ascending_lat
 
 NL = load_namelist()
 
@@ -71,21 +71,13 @@ HALF_WIN  = int(NL["HALF_WIN"])
 NOV_DAYS  = 30                       # November always has 30 days (used to slice DJF from NDJFM)
 MAR_DAYS  = 31                       # March always has 31 days (used to slice DJF from NDJFM)
 
-_lat_warned = False  # print the descending-lat warning only once across all load_months calls
-
 def load_months(year_month_list):
     """Load monthly files for the given (year, month) pairs, subset to analysis
     domain, and return a concatenated (days, lat, lon) float32 array."""
-    global _lat_warned
     arrays = []
     for yr, mo in year_month_list:
         f = f"{MON_DIR}/t2m_{yr:04d}_{mo:02d}.nc"
-        ds = xr.open_dataset(f)
-        if ds["lat"].values[0] > ds["lat"].values[-1]:
-            if not _lat_warned:
-                print(f"WARNING: lat is descending in {f}; flipping to ascending")
-                _lat_warned = True
-            ds = ds.isel(lat=slice(None, None, -1))
+        ds = ensure_ascending_lat(xr.open_dataset(f))
         da = ds["T2m"].sel(lat=slice(LAT_MIN, LAT_MAX))  # ascending lat: low→high
         arrays.append(da.values.astype(np.float32))
         ds.close()
@@ -112,10 +104,7 @@ print(f"  NDJFM day counts: {min(n_days_per)} – {max(n_days_per)}, max={N_DAYS
 n_djf_per = [nd - NOV_DAYS - MAR_DAYS for nd in n_days_per]  # 90 or 91
 
 # Read lat/lon from the first monthly file after applying the lat subset
-ds0 = xr.open_dataset(f"{MON_DIR}/t2m_1979_01.nc")
-if ds0["lat"].values[0] > ds0["lat"].values[-1]:
-    print("WARNING: reference file has descending lat; flipping before reading coordinates")
-    ds0 = ds0.isel(lat=slice(None, None, -1))
+ds0 = ensure_ascending_lat(xr.open_dataset(f"{MON_DIR}/t2m_1979_01.nc"))
 ds0_sub = ds0.sel(lat=slice(LAT_MIN, LAT_MAX))  # ascending lat: low→high
 lats = ds0_sub["lat"].values
 lons = ds0_sub["lon"].values

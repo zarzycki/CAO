@@ -18,7 +18,7 @@ import glob
 import os
 import sys
 
-from cao_utils import load_namelist
+from cao_utils import load_namelist, ensure_ascending_lat
 
 NL = load_namelist()
 
@@ -60,9 +60,7 @@ def process_month(year, month):
 
     # Rename coordinate names lat/lon to not deal with ERA5
     out = out.rename({"latitude": "lat", "longitude": "lon"})
-    if out["lat"].values[0] > out["lat"].values[-1]:
-        print("Latitude detected as decreasing, flipping!")
-        out = out.isel(lat=slice(None, None, -1))  # flip descending lat to ascending (-90→90)
+    out = ensure_ascending_lat(out)
 
     # float32 + zlib level 4 gives ~4× compression with negligible precision loss for T2m
     out.to_netcdf(outfile, encoding={"T2m": {"dtype": "float32", "zlib": True, "complevel": 4}})

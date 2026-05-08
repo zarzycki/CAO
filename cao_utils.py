@@ -1,5 +1,10 @@
 import os
 
+def ensure_ascending_lat(ds):
+    if ds["lat"].values[0] > ds["lat"].values[-1]:
+        ds = ds.isel(lat=slice(None, None, -1))
+    return ds
+
 def load_namelist():
     base = os.path.dirname(os.path.abspath(__file__))
     cfg = {}
