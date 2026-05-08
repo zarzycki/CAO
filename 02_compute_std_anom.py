@@ -19,11 +19,29 @@ import xarray as xr
 import numpy as np
 import os
 
+def _load_namelist():
+    base = os.path.dirname(os.path.abspath(__file__))
+    cfg = {}
+    for fname in ("namelist_defaults.sh", "namelist.sh"):
+        fpath = os.path.join(base, fname)
+        if not os.path.exists(fpath):
+            continue
+        with open(fpath) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                key, _, val = line.partition("=")
+                cfg[key.strip()] = val.strip()
+    return cfg
+
+NL = _load_namelist()
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--detrend",
     choices=["per_doy", "single_slope"],
-    default="single_slope",
+    default=NL.get("DETREND", "single_slope"),
     help=(
         "single_slope: one OLS trend across the full concatenated DJF series per grid cell (default); "
         "per_doy: separate OLS trend for each calendar-day position across years per grid cell"
@@ -40,7 +58,8 @@ parser.add_argument(
     nargs=2,
     type=int,
     metavar=("START", "END"),
-    default=None,
+    default=([int(NL["REF_PERIOD_START"]), int(NL["REF_PERIOD_END"])]
+             if NL.get("REF_PERIOD_START") and NL.get("REF_PERIOD_END") else None),
     help=(
         "Dec-year range (inclusive) used to compute the climatological mean and std. "
         "Example: --ref_period 1980 2010 uses DJF 1980-81 through DJF 2010-11. "
@@ -50,19 +69,19 @@ parser.add_argument(
 args = parser.parse_args()
 print(f"Detrend method: {args.detrend}")
 
-MON_DIR  = "/glade/derecho/scratch/zarzycki/CAO/daily_t2m"   # monthly t2m_{YYYY}_{MM}.nc
-OUT_DIR  = "/glade/derecho/scratch/zarzycki/CAO/std_anom"
-DIAG_DIR = "/glade/derecho/scratch/zarzycki/CAO/diagnostics"
+MON_DIR  = os.path.join(NL["SCRATCH_ROOT"], "daily_t2m")
+OUT_DIR  = os.path.join(NL["SCRATCH_ROOT"], "std_anom")
+DIAG_DIR = os.path.join(NL["SCRATCH_ROOT"], "diagnostics")
 os.makedirs(OUT_DIR,  exist_ok=True)
 os.makedirs(DIAG_DIR, exist_ok=True)
 
 # lat subsetting
-LAT_MIN = 25.0
-LAT_MAX = 90.0
+LAT_MIN = float(NL["LAT_MIN"])
+LAT_MAX = float(NL["LAT_MAX"])
 
-DEC_YEARS = list(range(1979, 2021))  # Dec year of each DJF season
-N_YEARS   = len(DEC_YEARS)           # Number of years to process
-HALF_WIN  = 10                       # 21-day window half-width (±10 days around each day)
+DEC_YEARS = list(range(int(NL["DEC_YEAR_START"]), int(NL["DEC_YEAR_END"]) + 1))
+N_YEARS   = len(DEC_YEARS)
+HALF_WIN  = int(NL["HALF_WIN"])
 NOV_DAYS  = 30                       # November always has 30 days (used to slice DJF from NDJFM)
 MAR_DAYS  = 31                       # March always has 31 days (used to slice DJF from NDJFM)
 
@@ -208,15 +227,19 @@ elif args.detrend == "single_slope":
     slopes = np.dot(t, flat_djf - djf_grand_mean.ravel()) / np.dot(t, t)
     # slopes[g]: K per DJF-day at grid cell g
 
-    # Remove trend AND grand mean from the DJF portion of each season,
-    # matching MATLAB's detrend() which removes intercept + slope (zero-mean result).
+    # Remove trend only (not the grand mean) from the DJF portion of each season.
+    # Keeping the grand mean intact ensures Nov/Mar shoulders and DJF are on the
+    # same temperature scale, so the 21-day running-mean climatology is smooth
+    # across the Nov/Dec and Feb/Mar boundaries.  clim_mean_smooth absorbs the
+    # mean in the anomaly calculation regardless, so the final standardized
+    # anomalies are identical either way.
     data_detrended = data.copy().astype(np.float64)
     djf_pos = 0
     for i in range(N_YEARS):
         n_djf = n_djf_per[i]
         t_c   = t[djf_pos:djf_pos + n_djf]
         data_detrended[i, NOV_DAYS:NOV_DAYS + n_djf, :, :] -= (
-            np.outer(t_c, slopes).reshape(n_djf, NLAT, NLON) + djf_grand_mean
+            np.outer(t_c, slopes).reshape(n_djf, NLAT, NLON)
         )
         djf_pos += n_djf
 
@@ -231,9 +254,8 @@ elif args.detrend == "single_slope":
 # grumm_hart slopes: K/year     → × 10
 # stone slopes:      K/DJF-day  → × (N_djf_total/N_YEARS) × 10
 #
-# NOTE: MATLAB's detrend() subtracts both slope AND mean (zero-mean result),
-# while Python preserves the mean.  This has no effect on standardized
-# anomalies because clim_mean is subtracted in step 5.
+# NOTE: only the slope is removed (not the grand mean), so Nov/Mar shoulders
+# and DJF data stay on the same temperature scale for the running-mean clim step.
 print("Computing trend diagnostics ...")
 
 if args.detrend == "per_doy":

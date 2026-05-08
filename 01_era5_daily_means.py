@@ -18,8 +18,26 @@ import glob
 import os
 import sys
 
-ERA5_SFC = "/glade/campaign/collections/rda/data/d633000/e5.oper.an.sfc"  # RDA campaign archive root
-OUT_DIR  = "/glade/derecho/scratch/zarzycki/CAO/daily_t2m"
+def _load_namelist():
+    base = os.path.dirname(os.path.abspath(__file__))
+    cfg = {}
+    for fname in ("namelist_defaults.sh", "namelist.sh"):
+        fpath = os.path.join(base, fname)
+        if not os.path.exists(fpath):
+            continue
+        with open(fpath) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                key, _, val = line.partition("=")
+                cfg[key.strip()] = val.strip()
+    return cfg
+
+NL = _load_namelist()
+
+ERA5_SFC = NL["ERA5_SFC"]
+OUT_DIR  = os.path.join(NL["SCRATCH_ROOT"], "daily_t2m")
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # Return the path to the ERA5 T2m hourly netCDF for the given year/month
@@ -68,7 +86,7 @@ def process_month(year, month):
 if len(sys.argv) == 3:
     process_month(int(sys.argv[1]), int(sys.argv[2]))
 elif len(sys.argv) == 1:
-    for year in range(1979, 2024):
+    for year in range(int(NL["DEC_YEAR_START"]), int(NL["DEC_YEAR_END"]) + 2):
         for month in range(1, 13):
             process_month(year, month)
 else:

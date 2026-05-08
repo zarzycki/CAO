@@ -7,29 +7,32 @@
 #PBS -q casper@casper-pbs
 #PBS -j oe
 
+# PBS copies this script to a spool directory before running it, so BASH_SOURCE[0]
+# is not useful for locating sibling files.  PBS_O_HOME is always set to the
+# submitter's home directory — use it to find the namelists in ~/CAO/.
+_CAO_DIR="${PBS_O_HOME}/CAO"
+# Load Stone et al. defaults first, then user overrides on top (last value wins)
+source "${_CAO_DIR}/namelist_defaults.sh"
+source "${_CAO_DIR}/namelist.sh"
+
 module load conda
 conda activate npl
 
-NUMCORES=16
-
-SCRIPT_DIR=/glade/u/home/zarzycki/CAO
-LOG_DIR=/glade/derecho/scratch/zarzycki/CAO/logs/step1
+LOG_DIR="${SCRATCH_ROOT}/logs/step1"
 mkdir -p "${LOG_DIR}"
 
-# Build command list: one python call per calendar month
-# Range 1979-01 through 2021-03 covers full years 1979-2020 (stone_orig)
-# plus Nov/Mar shoulder months for NDJFM running mean
+# Build command list: one python call per calendar month.
+# Loop through DEC_YEAR_START to DEC_YEAR_END+1 to include the March shoulder month
+# of the final season (e.g. March 2021 for the DJF 2020-21 season).
 CMDFILE=$(mktemp)
-for year in $(seq 1979 2024); do
-    end_month=12
-    #[[ $year -eq 2021 ]] && end_month=3
-    for month in $(seq 1 $end_month); do
+for year in $(seq ${DEC_YEAR_START} $((DEC_YEAR_END + 1))); do
+    for month in $(seq 1 12); do
         echo "python3 ${SCRIPT_DIR}/01_era5_daily_means.py ${year} ${month} > ${LOG_DIR}/${year}_$(printf '%02d' ${month}).log 2>&1" >> "${CMDFILE}"
     done
 done
 
-echo "Submitting $(wc -l < ${CMDFILE}) months across $NUMCORES parallel workers ..."
-parallel -j $NUMCORES < "${CMDFILE}"
+echo "Submitting $(wc -l < ${CMDFILE}) months across ${NUMCORES} parallel workers ..."
+parallel -j ${NUMCORES} < "${CMDFILE}"
 
 rm -f "${CMDFILE}"
 echo "Step 1 done."

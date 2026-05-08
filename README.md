@@ -6,6 +6,61 @@ Reproducing the CAO detection pipeline from:
 
 ---
 
+## Namelist
+
+All tunable parameters are controlled through two files in `~/CAO/`:
+
+| File | Purpose |
+|---|---|
+| `namelist_defaults.sh` | Stone et al. (2025) values for every key — **do not edit** |
+| `namelist.sh` | Your overrides — only keys that differ from the defaults need to appear here |
+
+Every script (shell and Python) loads `namelist_defaults.sh` first, then `namelist.sh` on top. Last value wins, so any key absent from `namelist.sh` automatically falls back to the default. The namelists are found via the script's own directory, so they work regardless of where `qsub` is called from.
+
+### All available keys
+
+| Key | Default | Step | Description |
+|---|---|---|---|
+| `ERA5_SFC` | *(NCAR RDA path)* | 1 | ERA5 hourly surface archive root |
+| `SCRATCH_ROOT` | *(NCAR scratch path)* | all | Root for all pipeline output directories |
+| `SCRIPT_DIR` | *(NCAR home path)* | all | Directory containing the scripts and namelists |
+| `TE_BIN_DIR` | *(NCAR work path)* | 3–4 | TempestExtremes binary directory |
+| `DEC_YEAR_START` | `1979` | all | First DJF season Dec-year (1979 → DJF 1979–80) |
+| `DEC_YEAR_END` | `2020` | all | Last DJF season Dec-year (2020 → DJF 2020–21) |
+| `NUMCORES` | `16` | 1 | GNU parallel workers for ERA5 month processing |
+| `LAT_MIN` | `25.0` | 2 | Southern latitude bound (°N) |
+| `LAT_MAX` | `90.0` | 2 | Northern latitude bound (°N) |
+| `HALF_WIN` | `10` | 2 | Climatology running-mean half-width in days (10 → 21-day window) |
+| `DETREND` | `single_slope` | 2 | Detrending method: `single_slope` or `per_doy` |
+| `REF_PERIOD_START` | *(blank)* | 2 | Climatology reference period start Dec-year; blank = all years |
+| `REF_PERIOD_END` | *(blank)* | 2 | Climatology reference period end Dec-year; blank = all years |
+| `THRESHOLD` | `-2` | 3 | Standardized-anomaly detection threshold (σ) |
+| `RADIUS` | `1` | 3 | DetectBlobs radius of influence (great-circle degrees) |
+| `MIN_SIZE` | `1500` | 4 | Minimum CAO size (grid cells per day) |
+| `MIN_TIME` | `3` | 4 | Minimum CAO duration (days) |
+| `MIN_OVERLAP_PREV` | `50` | 4 | Minimum overlap with previous day's blob (%) |
+
+### Typical edits
+
+The four path keys at the top of `namelist.sh` are the only ones that **must** be set for your system. Everything else has a working Stone et al. default. Common overrides:
+
+```bash
+# Change the year range
+DEC_YEAR_START=1990
+DEC_YEAR_END=2010
+
+# Use a fixed climatology reference period
+REF_PERIOD_START=1981
+REF_PERIOD_END=2010
+
+# Switch detrending method
+DETREND=per_doy
+```
+
+CLI flags on `02_compute_std_anom.py` (`--detrend`, `--ref_period`) override the namelist values for a single run without editing any file.
+
+---
+
 ## Quick-start workflow
 
 If you're picking this up after a break, run steps in order. Each step has a skip-if-exists check so partial runs are safe to resume.
@@ -43,7 +98,7 @@ Check job status with `qstat -u $USER`.
 
 | Location | Contents |
 |---|---|
-| `~/CAO/` | Scripts and Python code (git-backed) |
+| `~/CAO/` | Scripts, Python code, `namelist_defaults.sh`, and `namelist.sh` (git-backed) |
 | `/glade/derecho/scratch/zarzycki/CAO/daily_t2m/` | ERA5 daily means (step 1 output) |
 | `/glade/derecho/scratch/zarzycki/CAO/std_anom/` | Standardized anomalies (step 2 output) |
 | `/glade/derecho/scratch/zarzycki/CAO/binary_masks/` | Binary cold-air masks (step 3 output) |
