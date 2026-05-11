@@ -10,7 +10,7 @@ Method (Stone et al. 2025 / Grumm & Hart 2001):
   5. Standardize DJF portion: (T2m_detrended − clim_mean) / clim_std
   6. Save one DJF-only file per season
 
-Input:  /glade/derecho/scratch/zarzycki/CAO/daily_t2m/t2m_ndjfm_{Y}_{Y+1}.nc
+Input:  /glade/derecho/scratch/zarzycki/CAO/daily_t2m/t2m_{YYYY}_{MM}.nc  (individual monthly files)
 Output: /glade/derecho/scratch/zarzycki/CAO/std_anom/stdanom_djf_{Y}_{Y+1}.nc
 """
 

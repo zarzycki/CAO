@@ -134,9 +134,8 @@ binary_masks/    →  [Step 4]  →  blobs_reproduced/blobs_*.nc
 
 Reads ERA5 hourly 2-m temperature (`VAR_2T`, ECMWF parameter 128_167) for each calendar month,
 computes daily means, and writes a global (no lat clipping) compressed netCDF. Lat subsetting
-is applied in step 2. Existing files are skipped. The submit script loops 1979–2024; step 2
-only consumes months within DJF seasons 1979–80 through 2020–21 plus the Nov 1979 and Mar 2021
-shoulder months.
+is applied in step 2. Existing files are skipped. The submit script loops from `DEC_YEAR_START`
+through `DEC_YEAR_END+1` (to include the March shoulder of the final season).
 
 To process a single month:
 ```bash
@@ -149,7 +148,7 @@ python3 ~/CAO/01_era5_daily_means.py 1984 12   # regenerates December 1984
 
 **Script:** `02_compute_std_anom.py`  
 **Submit:** `sub_step2_casper.sh` (Casper, 1 CPU / 200 GB)  
-**Input:** `daily_t2m/t2m_ndjfm_*.nc`  
+**Input:** `daily_t2m/t2m_{YYYY}_{MM}.nc` (individual monthly files)  
 **Output:** `std_anom/stdanom_djf_{Y}_{Y+1}.nc`
 
 Implements the Grumm & Hart (2001) standardization as adapted by Stone et al. (2025):
@@ -236,7 +235,7 @@ These attributes are read directly by `extract_cao_point.py` (see below) so down
 **Output:** `binary_masks/mask_djf_{Y}_{Y+1}.nc`
 
 Runs TempestExtremes `DetectBlobs` via MPI (24 ranks) using file lists. The submit script loops
-1979–2023 but only the 42 seasons produced by step 2 (1979–2020) will have input files present.
+from `DEC_YEAR_START` through `DEC_YEAR_END` using the namelist values.
 Parameters follow Stone et al. (2025):
 
 | Parameter | Value | How specified |
