@@ -1,2 +1,6 @@
+.claude/
+pdf/
+*.csv
+__pycache__
 cao-step?.o*
 *.txt
