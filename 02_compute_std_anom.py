@@ -400,6 +400,9 @@ for i, dec_year in enumerate(DEC_YEARS):
         da.attrs.update({"long_name": long_name, "units": units})
         return da
 
+    clim_ref_start = args.ref_period[0] if args.ref_period else int(NL["DEC_YEAR_START"])
+    clim_ref_end   = args.ref_period[1] if args.ref_period else int(NL["DEC_YEAR_END"])
+
     ds = xr.Dataset({
         "t2m_stdanom":   _da(anom,
                              "t2m_stdanom",   "Standardized 2m temperature anomaly",         "sigma"),
@@ -412,6 +415,14 @@ for i, dec_year in enumerate(DEC_YEARS):
         "clim_std":      _da(clim_std_djf,
                              "clim_std",      "Smoothed climatological std (detrended)",     "K"),
     })
+    ds.attrs["clim_ref_period"]    = f"{clim_ref_start}-{clim_ref_end}"
+    ds.attrs["clim_ref_dec_start"] = clim_ref_start
+    ds.attrs["clim_ref_dec_end"]   = clim_ref_end
+    ds.attrs["detrend_method"]     = args.detrend
+    ds.attrs["clim_smooth_halfwin"]= HALF_WIN
+    ds.attrs["lat_bounds"]         = f"{LAT_MIN}-{LAT_MAX}N"
+    ds.attrs["record_dec_years"]   = f"{DEC_YEARS[0]}-{DEC_YEARS[-1]}"
+
     enc = {v: enc_f32 for v in ds.data_vars}
     ds.to_netcdf(outfile, encoding=enc)
     print(f"  Saved: {outfile}")

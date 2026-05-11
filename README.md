@@ -204,6 +204,22 @@ Fits a separate OLS trend for each of the 152 NDJFM calendar-day positions using
 
 The removed trend field (K/decade, scaled from the raw OLS slope) is written to `diagnostics/trend_removed_{method}.nc` for both options.
 
+### Output file attributes
+
+Each `stdanom_djf_{Y}_{Y+1}.nc` carries global NetCDF attributes that record the settings used to produce it:
+
+| Attribute | Example | Description |
+|---|---|---|
+| `clim_ref_period` | `"1979-2020"` | Climatology reference period (Dec-year range) as a string |
+| `clim_ref_dec_start` | `1979` | Reference period start Dec-year |
+| `clim_ref_dec_end` | `2020` | Reference period end Dec-year |
+| `detrend_method` | `"single_slope"` | Detrending method used |
+| `clim_smooth_halfwin` | `10` | Running-mean half-width in days (10 → 21-day window) |
+| `lat_bounds` | `"25.0-90.0N"` | Latitude domain subset applied |
+| `record_dec_years` | `"1979-2024"` | Full record range the script was run over |
+
+These attributes are read directly by `extract_cao_point.py` (see below) so downstream scripts do not need to re-read the namelist to know how a file was produced.
+
 ---
 
 ## Step 3 — DetectBlobs
@@ -256,6 +272,35 @@ Runs TempestExtremes `StitchBlobs` serially, passing all 42 seasons via `--in_li
 > `--regional` is required because the ERA5 input is a 25–90°N latitude subset, not a full global grid.
 
 > Derecho alternative: `sub_step4_derecho.sh` — uses the Derecho build and `cray-mpich`.
+
+---
+
+## Point extraction
+
+**Script:** `extract_cao_point.py`
+
+Scans all DJF seasons for days where the standardized T2m anomaly at a given grid point is ≤ −2σ and writes a CSV suitable for sharing with stakeholders. The nearest 0.25° ERA5 grid point to the requested coordinates is selected automatically.
+
+```bash
+python3 ~/CAO/extract_cao_point.py --lat 39.9526 --lon -75.1652          # Philadelphia (°W accepted)
+python3 ~/CAO/extract_cao_point.py --lat 39.9526 --lon 284.83            # same, 0–360 lon
+python3 ~/CAO/extract_cao_point.py --lat 40.71 --lon -74.01 --out nyc.csv  # custom output path
+```
+
+Output columns:
+
+| Column | Units | Description |
+|---|---|---|
+| `date` | — | Calendar date (YYYY-MM-DD) |
+| `T2m_C` | °C | Raw daily 2-m temperature |
+| `T2m_clim_C` | °C | 21-day smoothed climatological mean for that calendar day |
+| `clim_ref_period` | — | Reference period used for the climatology (read from file attributes) |
+| `t2m_stdanom` | σ | Standardized anomaly (standardized using smoothed climatology) |
+| `blob` | 0/1 | 1 if a tracked CAO blob exists at this grid point on this day; 0 otherwise |
+
+The `clim_ref_period` value is read from the global attributes of the `stdanom_djf_*.nc` files (written by step 2). For files produced before those attributes were added, the script falls back to the namelist values.
+
+The `blob` column reflects the Stone et al. (2025) tracking criteria (≥1500 cells, ≥3 days, ≥50% overlap with previous day). A day with `blob=0` indicates a locally cold anomaly that did not belong to a large, persistent, spatially coherent CAO by those criteria — it may be an isolated cold snap or an event that fell just below the size or duration threshold.
 
 ---
 
