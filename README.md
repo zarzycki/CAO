@@ -128,8 +128,8 @@ binary_masks/    →  [Step 4]  →  blobs_reproduced/blobs_*.nc
 
 ## Step 1 — ERA5 daily means
 
-**Script:** `01_era5_daily_means.py`  
-**Submit:** `sub_step1_casper.sh` (Casper, 16 CPUs / 200 GB, GNU parallel)  
+**Script:** `01_era5_daily_means.py`
+**Submit:** `sub_step1_casper.sh` (Casper, 16 CPUs / 200 GB, GNU parallel)
 **Output:** `daily_t2m/t2m_{YYYY}_{MM}.nc` — one file per calendar month
 
 Reads ERA5 hourly 2-m temperature (`VAR_2T`, ECMWF parameter 128_167) for each calendar month,
@@ -146,9 +146,9 @@ python3 ~/CAO/01_era5_daily_means.py 1984 12   # regenerates December 1984
 
 ## Step 2 — Detrend and standardize
 
-**Script:** `02_compute_std_anom.py`  
-**Submit:** `sub_step2_casper.sh` (Casper, 1 CPU / 200 GB)  
-**Input:** `daily_t2m/t2m_{YYYY}_{MM}.nc` (individual monthly files)  
+**Script:** `02_compute_std_anom.py`
+**Submit:** `sub_step2_casper.sh` (Casper, 1 CPU / 200 GB)
+**Input:** `daily_t2m/t2m_{YYYY}_{MM}.nc` (individual monthly files)
 **Output:** `std_anom/stdanom_djf_{Y}_{Y+1}.nc`
 
 Implements the Grumm & Hart (2001) standardization as adapted by Stone et al. (2025):
@@ -229,9 +229,9 @@ These attributes are read directly by `extract_cao_point.py` (see below) so down
 
 ## Step 3 — DetectBlobs
 
-**Script:** `sub_step3_casper.sh` (Casper, 1 node / 24 CPUs / 160 GB, Genoa)  
-**Binary:** `/glade/work/zarzycki/tempestextremes_casper/bin/DetectBlobs`  
-**Input:** `std_anom/stdanom_djf_*.nc`  
+**Script:** `sub_step3_casper.sh` (Casper, 1 node / 24 CPUs / 160 GB, Genoa)
+**Binary:** `/glade/work/zarzycki/tempestextremes_casper/bin/DetectBlobs`
+**Input:** `std_anom/stdanom_djf_*.nc`
 **Output:** `binary_masks/mask_djf_{Y}_{Y+1}.nc`
 
 Runs TempestExtremes `DetectBlobs` via MPI (24 ranks) using file lists. The submit script loops
@@ -254,9 +254,9 @@ meeting the −2σ threshold, effectively dilating the detected regions outward 
 
 ## Step 4 — StitchBlobs
 
-**Script:** `sub_step4_casper.sh` (Casper, 1 CPU / 10 GB, serial)  
-**Binary:** `/glade/work/zarzycki/tempestextremes_casper/bin/StitchBlobs`  
-**Input:** `binary_masks/mask_djf_*.nc`  
+**Script:** `sub_step4_casper.sh` (Casper, 1 CPU / 10 GB, serial)
+**Binary:** `/glade/work/zarzycki/tempestextremes_casper/bin/StitchBlobs`
+**Input:** `binary_masks/mask_djf_*.nc`
 **Output:** `blobs_reproduced/blobs_{Y}_{Y+1}.nc`
 
 Runs TempestExtremes `StitchBlobs` serially, passing all 42 seasons via `--in_list` /
@@ -348,7 +348,5 @@ module stack automatically:
 ncarenv / ncarcompilers / intel / openmpi / netcdf
 ```
 
-TempestExtremes source: `/glade/work/zarzycki/tempestextremes_casper/` (Casper build)  
-TempestExtremes docs: https://climate.ucdavis.edu/tempestextremes.php  
-Reference paper: `~/CAO/mwre-MWR-D-23-0265.1.pdf`  
-Grumm & Hart 2001 (standardization method): `~/CAO/grumm2001.pdf`
+TempestExtremes source: `/glade/work/zarzycki/tempestextremes_casper/` (Casper build)
+TempestExtremes docs: https://climate.ucdavis.edu/tempestextremes.php
