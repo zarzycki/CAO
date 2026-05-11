@@ -192,7 +192,11 @@ python3 ~/CAO/02_compute_std_anom.py --detrend per_doy --ref_period 1981 2010 --
 
 ### Detrending options (`--detrend`)
 
-Both options fit an ordinary least-squares (OLS) linear trend at each grid cell and subtract it, centering the fit so that mid-record values are unchanged. They differ in how the time axis is defined.
+**Why detrend at all?** The goal here is to isolate *circulation-driven* cold-air outbreaks from the background thermodynamic warming signal. The literature on daily temperature extremes splits broadly into two camps: studies that retain the warming trend (appropriate for realized-hazard or exposure questions) and studies that remove it first (appropriate for dynamics and internal-variability questions). Because this pipeline is diagnostic — asking whether a coherent cold air mass is present, not whether temperatures are cold in absolute terms — detrending before standardization is the right choice. [Gibson et al. (2017)](https://doi.org/10.1175/JCLI-D-17-0265.1) and [Millin et al. (2022)](https://doi.org/10.1175/JCLI-D-21-0772.1) both follow this logic for heat-wave and CAO driver analyses respectively.
+
+**What the literature does:** A survey of the HW/CAO literature shows that **no explicit detrending** and **one linear trend per grid cell** are by far the most common choices; separate trends for each calendar day exist but are specialized. [Wu et al. (2025)](https://doi.org/10.1038/s41467-025-58544-5) and [Skinner et al. (2025)](https://doi.org/10.1038/s43247-025-02661-y) represent the per-calendar-day end of the spectrum, using rolling-window polynomial fits to allow seasonally varying warming rates.
+
+Both options below fit an ordinary least-squares (OLS) linear trend at each grid cell and subtract it, centering the fit so that mid-record values are unchanged. They differ in how the time axis is defined.
 
 **`single_slope` (default)**
 
@@ -203,6 +207,8 @@ Concatenates all DJF days from every season into one continuous time series (~42
 Fits a separate OLS trend for each of the 152 NDJFM calendar-day positions using only the ≤42 year-values that contain that day (non-leap years lack Feb 29). The time axis is the decimal year, centered at its mean (~2000), so the per-season mean is preserved. Each slope is estimated from only ~42 samples, making individual day-position estimates noisier than `single_slope`; the 21-day running-mean smoothing applied to the climatology in step 4 partially mitigates this. This formulation allows the warming rate to vary by calendar day, which matters if December and February are not warming at the same rate.
 
 The removed trend field (K/decade, scaled from the raw OLS slope) is written to `diagnostics/trend_removed_{method}.nc` for both options.
+
+**Practical considerations:** The detrending choice can materially change inferred event statistics. [Skinner et al. (2025)](https://doi.org/10.1038/s43247-025-02661-y) found that heat-wave area increases were widespread with fixed thresholds but became far less common when thresholds were updated relative to the warmer half of the record — much of the apparent increase was thermodynamic rather than dynamical. [Beobide-Arsuaga et al. (2025)](https://doi.org/10.1038/s41467-025-65392-w) similarly found European heatwave intensity trends "considerably reduced" after removing the mean temperature rise. For a ~45-year record, 365 independent day-of-year slopes are usually too noisy to be useful without a rolling window or polynomial smoother — which is why `per_doy` here uses a 21-day running mean on the resulting climatology. As a rule of thumb: if event *counts or trends* differ substantially between `single_slope` and `per_doy`, report both and treat detrending as an explicit uncertainty.
 
 ### Output file attributes
 
